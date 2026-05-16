@@ -1,3 +1,4 @@
+package flags;
 import java.util.*;
 
 public class Solution {
