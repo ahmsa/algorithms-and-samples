@@ -1,25 +1,32 @@
-package flags;
+
+
 import java.util.*;
 
 public class Solution {
-
     public int solution(int[] A) {
-        if(A.length < 3){
-            log("A.length < 3 ... Returning 0");
+        log("input: " + toString(A));
+        if(A == null || A.length < 3){
+            log("A is null or less than 3.  Returning 0");
             return 0;
         }
 
         List<Integer> peaks = getPeaks(A);
-        log("There are " + peaks.size() + " peaks");
+        log("Peaks: " + toString(peaks));
 
-        return getMaxFlags(peaks, A);
+        if(peaks.size() < 2){
+            return peaks.size();
+        }
+
+        int[] nextPeaks = getNextPeaks(A, peaks);
+        log("nextPeaks: " + toString(nextPeaks));
+        return getFlagCount(A, peaks, nextPeaks);
     }
 
     List<Integer> getPeaks(int[] A){
         List<Integer> peaks = new ArrayList<Integer>();
 
         for(int i = 1; i < A.length - 1; i++){
-            if(isPeak(A, i)){
+            if(A[i - 1] < A[i] && A[i] > A[i+1]){
                 peaks.add(i);
             }
         }
@@ -27,64 +34,100 @@ public class Solution {
         return peaks;
     }
 
-    boolean isPeak(int[] A, int i){
-        return A[i - 1] < A[i] && A[i] > A[i + 1];
+    int[] getNextPeaks(int[] A, List<Integer> peaks){
+        int[] nextPeaks = new int[A.length];
+
+        int peakCntr = 0;
+        int peak = peaks.get(peakCntr);
+        int lastPeak = peaks.getLast();
+        for(int i = 0; i < A.length; i++){
+            if(i >= lastPeak){
+                return nextPeaks;
+            }
+
+            if(i == peak){
+                peak = peaks.get(++peakCntr);
+            }
+
+            nextPeaks[i] = peak;
+        }
+
+        return nextPeaks;
     }
 
-    int getMaxFlags(List<Integer> peaks, int[] A){
-        int mostToTry = getMostToTry(peaks, A);
-
-        log("getMaxFlags - most to try: " + mostToTry);
-
-        for(int toTry = mostToTry; toTry > 0; toTry--){
-            if(canPlace(peaks, A, toTry)){
-                log("Can place " + toTry + " flags");
-                return toTry;
-            } else {
-                log("Could NOT place " + toTry + " flags");
+    int getFlagCount(int[] A, List<Integer> peaks, int[] nextPeaks){
+        int sqrRt = (int)Math.sqrt(A.length) + 1;
+        
+        for(int i = sqrRt; i > 0; i--){
+            if(canPlace(A, peaks, nextPeaks, i)){
+                log("can place: " + i);
+                return i;
             }
         }
 
-        log("did not find to place.  Returning 1");
-        return 1;
+        return 0;
     }
 
-    boolean canPlace(List<Integer> peaks, int[] A, int toTry){
-        if(peaks.size() < toTry){
-            log("[canPlace] peaks.size() < toTry ... cannot place ");
-            return false;
-        }
+    boolean canPlace(int[] A, List<Integer> peaks, int[] nextPeaks, int tryFlags){
+        int flagIndex = peaks.get(0);
+        int flagsPlaced = 0;
 
-        if(toTry == 1){
-            log("[canPlace] to try is 1 ... return true");
-            return true;
-        }
-
-        int currentDist = peaks.get(0);
-        int addedFlags = 1;
-        for(int i = 1; i < peaks.size(); i++){
-            int nextDist = peaks.get(i);
-            log("testing nextDist: " + nextDist + "; currentDist: " + currentDist);
-            if(nextDist - currentDist >= toTry){
-                addedFlags++;
-                currentDist = nextDist;
-                log("[canPlace] Adding a flag: " + nextDist + "; total flags: " + addedFlags);
+        while(flagIndex > 0){
+            flagsPlaced++;
+            if(flagsPlaced >= tryFlags){
+                return true;
             }
+
+            flagIndex = getNextFlagLocation(A, peaks, nextPeaks, tryFlags, flagIndex);
         }
 
-        log("[canPlace] - returning addedFlags: " + addedFlags + "; toTry: " + toTry);
-        return addedFlags >= toTry;
+        return flagsPlaced >= tryFlags;
     }
 
-    int getMostToTry(List<Integer> peaks, int[] A){
-        double sqrRt = Math.sqrt(A.length);
-        int intSqrRt = (int) Math.ceil(sqrRt);
-        return intSqrRt + 1;
+    int getNextFlagLocation(int[] A, List<Integer> peaks, int[] nextPeaks, int tryFlags, int flagIndex){
+
+        int nextFlagLocation = flagIndex + tryFlags;
+
+        if(nextFlagLocation >= nextPeaks.length){
+            return 0;
+        }
+
+        if(isPeak(nextPeaks, nextFlagLocation)){
+            return nextFlagLocation;
+        }
+
+        return nextPeaks[nextFlagLocation];
+
+    }
+
+    boolean isPeak(int[] nextPeaks, int nextFlagLocation){
+        return nextPeaks[nextFlagLocation - 1] == nextFlagLocation && nextPeaks[nextFlagLocation] != nextFlagLocation;
     }
 
     void log(String str){
-        // Uncomment below if you want to see your log tracing
-        // System.out.println(str);
+        System.out.println(str);
+    }
+
+    String toString(List a){
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i < a.size(); i++){
+            if(i > 0){
+                sb.append("[" + i + "] :" + ", ");
+            }
+            sb.append(a.get(i));
+        }
+        return sb.toString();
+    }
+
+    String toString(int[] a){
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i < a.length; i++){
+            if(i > 0){
+                sb.append(", ");
+            }
+            sb.append("[" + i + "] :" + a[i]);
+        }
+        return sb.toString();
     }
 
     // =========================================================================
