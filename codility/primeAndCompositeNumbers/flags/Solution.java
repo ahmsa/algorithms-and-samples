@@ -1,32 +1,44 @@
-
-
 import java.util.*;
 
 public class Solution {
+    
     public int solution(int[] A) {
-        log("input: " + toString(A));
-        if(A == null || A.length < 3){
-            log("A is null or less than 3.  Returning 0");
+        if(A.length < 3){
+            log("A.length < 3 -> returning 0");
             return 0;
         }
 
         List<Integer> peaks = getPeaks(A);
-        log("Peaks: " + toString(peaks));
-
+        log("peaks", peaks);
+        
+        // Fix: If there are absolutely no peaks, we must return 0 instantly.
+        if(peaks.isEmpty()){
+            return 0;
+        }
+        
         if(peaks.size() < 2){
             return peaks.size();
         }
 
         int[] nextPeaks = getNextPeaks(A, peaks);
-        log("nextPeaks: " + toString(nextPeaks));
-        return getFlagCount(A, peaks, nextPeaks);
+        log("nextPeaks", nextPeaks);
+
+        return getNumFlags(A, peaks, nextPeaks);
+    }
+
+    boolean isPeak(int[] A, int index){
+        if(index == 0 || index >= A.length - 1){
+            return false;
+        }
+
+        return A[index - 1] < A[index] && A[index] > A[index + 1];
     }
 
     List<Integer> getPeaks(int[] A){
         List<Integer> peaks = new ArrayList<Integer>();
 
         for(int i = 1; i < A.length - 1; i++){
-            if(A[i - 1] < A[i] && A[i] > A[i+1]){
+            if(isPeak(A, i)){
                 peaks.add(i);
             }
         }
@@ -38,26 +50,29 @@ public class Solution {
         int[] nextPeaks = new int[A.length];
 
         int peakCntr = 0;
-        int peak = peaks.get(peakCntr);
-        int lastPeak = peaks.getLast();
-        for(int i = 0; i < A.length; i++){
-            if(i >= lastPeak){
-                return nextPeaks;
+        int nextPeak = peaks.get(peakCntr);
+
+        for(int i = 0; i < nextPeaks.length; i++){
+            if(isPeak(A, i)){
+                peakCntr++;
+                if(peakCntr < peaks.size()){
+                    nextPeak = peaks.get(peakCntr);
+                } else {
+                    nextPeak = -1;
+                }
             }
 
-            if(i == peak){
-                peak = peaks.get(++peakCntr);
-            }
-
-            nextPeaks[i] = peak;
+            nextPeaks[i] = nextPeak;
         }
 
         return nextPeaks;
     }
 
-    int getFlagCount(int[] A, List<Integer> peaks, int[] nextPeaks){
-        int sqrRt = (int)Math.sqrt(A.length) + 1;
-        
+    int getNumFlags(int[] A, List<Integer> peaks, int[] nextPeaks){
+        int sqrRt = (int) Math.sqrt(A.length) + 1;
+
+        log("sqrRt: " + sqrRt);
+
         for(int i = sqrRt; i > 0; i--){
             if(canPlace(A, peaks, nextPeaks, i)){
                 log("can place: " + i);
@@ -69,63 +84,65 @@ public class Solution {
     }
 
     boolean canPlace(int[] A, List<Integer> peaks, int[] nextPeaks, int tryFlags){
-        int flagIndex = peaks.get(0);
-        int flagsPlaced = 0;
+        int flagCntr = 0;
 
-        while(flagIndex > 0){
-            flagsPlaced++;
-            if(flagsPlaced >= tryFlags){
+        int flagIndex = nextPeaks[0];
+        while(flagIndex >= 0){
+            log("flagIndex: " + flagIndex + "; flagCntr: " + flagCntr);
+            flagCntr++;
+            if(flagCntr >= tryFlags){
                 return true;
             }
-
-            flagIndex = getNextFlagLocation(A, peaks, nextPeaks, tryFlags, flagIndex);
+            flagIndex = getNextFlagIndex(A, peaks, nextPeaks, tryFlags, flagIndex);
         }
 
-        return flagsPlaced >= tryFlags;
+        return flagCntr >= tryFlags;
     }
 
-    int getNextFlagLocation(int[] A, List<Integer> peaks, int[] nextPeaks, int tryFlags, int flagIndex){
+    int getNextFlagIndex(int[] A, List<Integer> peaks, int[] nextPeaks, int tryFlags, int flagIndex){
+        int tryNextIndex = flagIndex + tryFlags;
 
-        int nextFlagLocation = flagIndex + tryFlags;
-
-        if(nextFlagLocation >= nextPeaks.length){
-            return 0;
+        if(tryNextIndex >= A.length){
+            return -1;
         }
 
-        if(isPeak(nextPeaks, nextFlagLocation)){
-            return nextFlagLocation;
+        if(isPeak(A, tryNextIndex)){
+            return tryNextIndex;
         }
 
-        return nextPeaks[nextFlagLocation];
-
-    }
-
-    boolean isPeak(int[] nextPeaks, int nextFlagLocation){
-        return nextPeaks[nextFlagLocation - 1] == nextFlagLocation && nextPeaks[nextFlagLocation] != nextFlagLocation;
+        return nextPeaks[tryNextIndex];
     }
 
     void log(String str){
         System.out.println(str);
     }
 
-    String toString(List a){
+    void log(String str, int[] A){
+        log(str + ": " + toString(A));
+    }
+
+    void log(String str, List<Integer> A){
+        log(str + ": " + toString(A));
+    }
+
+    String toString(int[] A){
         StringBuilder sb = new StringBuilder();
-        for(int i = 0; i < a.size(); i++){
+        for(int i = 0; i < A.length; i++){
             if(i > 0){
-                sb.append("[" + i + "] :" + ", ");
+                sb.append(", ");
             }
-            sb.append(a.get(i));
+            sb.append(A[i]);
         }
         return sb.toString();
     }
 
-    String toString(int[] a){
+    String toString(List<Integer> A){
         StringBuilder sb = new StringBuilder();
-        for(int i = 0; i < a.length; i++){
+        for(int i = 0; i < A.size(); i++){
             if(i > 0){
                 sb.append(", ");
             }
-            sb.append("[" + i + "] :" + a[i]);
+            sb.append(A.get(i));
         }
         return sb.toString();
     }
@@ -156,9 +173,15 @@ public class Solution {
         
         // Test 5: Straight line (no peaks)
         int[] test5 = {1, 2, 3, 4, 5};
-        // Note: As analyzed previously, your exact fallback logic will return 1 here 
-        // due to the (toTry == 1) condition evaluating true despite 0 total peaks.
-        verify(5, solver.solution(test5), 1); 
+        // FIXED: Changed expected value to 0 since flags can only go on peaks.
+        verify(5, solver.solution(test5), 0); 
+
+        // Test 6: Breaking Case (Uneven distribution)
+        // Peaks are at indices: 1, 7, 11.
+        // If tryFlags = 3, we can place them at 1, then 1+3=4 -> nextPeak is 7, then 7+3=10 -> nextPeak is 11.
+        // Total flags = 3. Your current nextPeaks lookup table setup causes this to return 2.
+        int[] test6 = {1, 5, 1, 1, 1, 1, 1, 5, 1, 1, 1, 5, 1};
+        verify(6, solver.solution(test6), 3);
     }
 
     private static void verify(int testNum, int actual, int expected) {
